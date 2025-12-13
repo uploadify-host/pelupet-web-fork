@@ -6,21 +6,28 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Link from 'next/link'
 import { servicesAPI } from '@/lib/api'
 import { Service } from '@/lib/types'
+import { Navbar } from '@/components/Navbar'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { BentoGrid, BentoGridItem } from '@/components/ui/bento-grid'
+import { cn, formatCurrency } from '@/lib/utils'
+import { Scissors, Stethoscope, GraduationCap, Sparkles, PawPrint, Cat } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const categoryColors = {
-  grooming: 'from-emerald-500 to-teal-500',
+  grooming: 'from-sky-500 to-cyan-500',
   veterinary: 'from-cyan-500 to-blue-500',
-  training: 'from-purple-500 to-pink-500',
-  other: 'from-orange-500 to-red-500',
+  training: 'from-blue-500 to-cyan-500',
+  other: 'from-blue-500 to-red-500',
 }
 
-const categoryEmojis = {
-  grooming: '💇',
-  veterinary: '🏥',
-  training: '🎓',
-  other: '✨',
+const categoryIcons = {
+  grooming: Scissors,
+  veterinary: Stethoscope,
+  training: GraduationCap,
+  other: Sparkles,
 }
 
 export default function ServicesPage() {
@@ -88,30 +95,16 @@ export default function ServicesPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-slate-50">
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-lg z-50 border-b border-emerald-100">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="text-3xl">🐾</div>
-              <span className="text-2xl font-bold text-emerald-600">PeluPet</span>
-            </Link>
-            <div className="flex gap-4">
-              <Link href="/appointments" className="bg-emerald-600 text-white px-6 py-2 rounded-full hover:bg-emerald-700 transition-colors">
-                Agendar Cita
-              </Link>
-              <Link href="/" className="text-slate-700 hover:text-emerald-600 transition-colors flex items-center">
-                Volver
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="pt-32 pb-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
+            <Badge variant="secondary" className="px-4 py-2 bg-sky-100 text-sky-700 text-sm font-semibold mb-4">
+              Catálogo de Servicios
+            </Badge>
             <h1 className="page-title text-6xl font-bold text-slate-800 mb-4">
-              Nuestros Servicios
+              Nuestros <span className="text-sky-600">Servicios</span>
             </h1>
             <p className="text-xl text-slate-600">
               Servicios profesionales para el cuidado integral de tu mascota
@@ -120,94 +113,98 @@ export default function ServicesPage() {
 
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             {categories.map((cat) => (
-              <button
+              <Button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`category-filter px-6 py-3 rounded-full font-semibold transition-all ${
-                  selectedCategory === cat
-                    ? 'bg-emerald-600 text-white shadow-lg scale-105'
-                    : 'bg-white text-slate-700 hover:bg-emerald-50'
-                }`}
+                variant={selectedCategory === cat ? "default" : "outline"}
+                className={cn(
+                  "category-filter rounded-full font-semibold transition-all",
+                  selectedCategory === cat && "bg-sky-600 hover:bg-sky-700"
+                )}
               >
                 {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </button>
+              </Button>
             ))}
           </div>
 
           {loading ? (
             <div className="text-center py-20">
-              <div className="text-6xl mb-4 animate-bounce">🐾</div>
+              <PawPrint className="w-24 h-24 mx-auto mb-4 animate-bounce text-blue-600" />
               <p className="text-xl text-slate-600">Cargando servicios...</p>
             </div>
           ) : filteredServices.length === 0 ? (
             <div className="text-center py-20">
-              <div className="text-6xl mb-4">😿</div>
+              <Cat className="w-24 h-24 mx-auto mb-4 text-slate-400" />
               <p className="text-xl text-slate-600">No hay servicios disponibles</p>
             </div>
           ) : (
-            <div className="services-grid grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <BentoGrid className="services-grid">
               {filteredServices.map((service, index) => (
-                <div
+                <BentoGridItem
                   key={service.id}
-                  className="service-item bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2"
-                >
-                  <div className={`bg-gradient-to-br ${categoryColors[service.category]} p-8 text-white`}>
-                    <div className="text-6xl mb-4">
-                      {categoryEmojis[service.category]}
-                    </div>
-                    <span className="inline-block bg-white/20 backdrop-blur-sm px-4 py-1 rounded-full text-sm font-semibold">
-                      {service.category}
-                    </span>
-                  </div>
-
-                  <div className="p-8">
-                    <h3 className="text-2xl font-bold text-slate-800 mb-3">
-                      {service.name}
-                    </h3>
-                    <p className="text-slate-600 mb-6">
-                      {service.description || 'Servicio profesional de alta calidad'}
-                    </p>
-
-                    <div className="flex justify-between items-center mb-6">
-                      <div>
-                        <p className="text-sm text-slate-500">Precio</p>
-                        <p className="text-3xl font-bold text-emerald-600">
-                          ${service.price}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-slate-500">Duración</p>
-                        <p className="text-lg font-semibold text-slate-700">
-                          {service.duration_minutes} min
-                        </p>
+                  className="service-item md:col-span-1"
+                  title={service.name}
+                  description={service.description || 'Servicio profesional de alta calidad'}
+                  gradient={categoryColors[service.category]}
+                  header={
+                    <div className={cn(
+                      "flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br items-center justify-center",
+                      categoryColors[service.category]
+                    )}>
+                      <div className="text-center">
+                        {(() => {
+                          const Icon = categoryIcons[service.category]
+                          return <Icon className="w-16 h-16 text-white mb-2 mx-auto" />
+                        })()}
+                        <Badge variant="secondary" className="mt-2 bg-white/20 backdrop-blur-sm text-white border-0">
+                          {service.category}
+                        </Badge>
                       </div>
                     </div>
-
-                    <Link
-                      href={`/appointments?service=${service.id}`}
-                      className="block w-full bg-emerald-600 text-white text-center px-6 py-3 rounded-full font-semibold hover:bg-emerald-700 transition-colors"
-                    >
-                      Agendar Ahora
-                    </Link>
-                  </div>
-                </div>
+                  }
+                  icon={
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-xs text-slate-500">Precio</p>
+                          <p className="text-2xl font-bold text-sky-600">
+                            {formatCurrency(service.price)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-slate-500">Duración</p>
+                          <p className="text-sm font-semibold text-slate-700">
+                            {service.duration_minutes} min
+                          </p>
+                        </div>
+                      </div>
+                      <Link href={`/appointments?service=${service.id}`}>
+                        <Button className="w-full bg-sky-600 hover:bg-sky-700 rounded-full">
+                          Agendar Ahora
+                        </Button>
+                      </Link>
+                    </div>
+                  }
+                />
               ))}
-            </div>
+            </BentoGrid>
           )}
 
-          <div className="mt-16 text-center">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-3xl p-12 text-white">
-              <h2 className="text-3xl font-bold mb-4">¿No encuentras lo que buscas?</h2>
-              <p className="text-xl text-emerald-50 mb-8">
-                Solicita un servicio personalizado adaptado a las necesidades de tu mascota
-              </p>
-              <Link
-                href="/custom-services"
-                className="inline-block bg-white text-emerald-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-emerald-50 transition-colors"
-              >
-                Solicitar Servicio Custom
-              </Link>
-            </div>
+          <div className="mt-16">
+            <Card className="bg-gradient-to-r from-sky-600 to-cyan-600 border-0 text-white overflow-hidden">
+              <CardContent className="p-12 text-center">
+                <Sparkles className="w-24 h-24 mx-auto mb-4" />
+                <h2 className="text-3xl font-bold mb-4">¿No encuentras lo que buscas?</h2>
+                <p className="text-xl text-sky-50 mb-8">
+                  Solicita un servicio personalizado adaptado a las necesidades de tu mascota
+                </p>
+                <Link href="/custom-services">
+                  <Button size="lg" variant="secondary" className="rounded-full text-lg font-semibold">
+                    Solicitar Servicio Custom
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

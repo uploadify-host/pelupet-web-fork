@@ -1,38 +1,36 @@
 'use client'
 
 import { useEffect, useRef, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import gsap from 'gsap'
-import Link from 'next/link'
-import { servicesAPI, customersAPI, petsAPI, appointmentsAPI } from '@/lib/api'
-import { Service, Customer, Pet } from '@/lib/types'
+import { servicesAPI, petsAPI, appointmentsAPI } from '@/lib/api'
+import { authAPI } from '@/lib/auth'
+import { Service, Pet } from '@/lib/types'
+import { PawPrint, Scissors, Calendar, FileText, CheckCircle, Dog } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { Navbar } from '@/components/Navbar'
 
 function AppointmentsForm() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const preSelectedService = searchParams.get('service')
   
   const [services, setServices] = useState<Service[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [pets, setPets] = useState<Pet[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
-  const [isNewCustomer, setIsNewCustomer] = useState(true)
   const [isNewPet, setIsNewPet] = useState(true)
 
   const [formData, setFormData] = useState({
     serviceId: preSelectedService || '',
-    customerId: '',
     petId: '',
     appointmentDate: '',
     notes: '',
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    customerAddress: '',
     petName: '',
-    petSpecies: '',
+    petSpecies: 'cat',
     petBreed: '',
     petAge: '',
   })
@@ -40,21 +38,40 @@ function AppointmentsForm() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadData()
+    checkAuthAndLoadData()
   }, [])
+
+  const checkAuthAndLoadData = async () => {
+    const currentUser = authAPI.getCurrentUser()
+    
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión para agendar una cita')
+      router.push('/login')
+      return
+    }
+
+    setUser(currentUser)
+    await loadData()
+  }
 
   const loadData = async () => {
     try {
-      const [servicesRes, customersRes, petsRes] = await Promise.all([
+      const [servicesRes, petsRes] = await Promise.all([
         servicesAPI.getAll(),
-        customersAPI.getAll(),
         petsAPI.getAll(),
       ])
       setServices(servicesRes.data)
-      setCustomers(customersRes.data)
-      setPets(petsRes.data)
+      
+      const currentUser = authAPI.getCurrentUser()
+      if (currentUser?.customer_id) {
+        const userPets = petsRes.data.filter((pet: Pet) => pet.customer_id === currentUser.customer_id)
+        setPets(userPets)
+      } else {
+        setPets(petsRes.data)
+      }
     } catch (error) {
       console.error('Error loading data:', error)
+      toast.error('Error al cargar los datos')
     } finally {
       setLoading(false)
     }
@@ -78,47 +95,57 @@ function AppointmentsForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!user?.customer_id) {
+      toast.error('Error: No se encontró información del cliente')
+      return
+    }
+
     setSubmitting(true)
 
     try {
-      let customerId = formData.customerId
       let petId = formData.petId
 
-      if (isNewCustomer) {
-        const customerRes = await customersAPI.create({
-          name: formData.customerName,
-          email: formData.customerEmail,
-          phone: formData.customerPhone,
-          address: formData.customerAddress,
-        })
-        customerId = customerRes.data.id.toString()
-      }
-
       if (isNewPet) {
+        if (!formData.petName || !formData.petSpecies || !formData.petAge) {
+          toast.error('Por favor completa todos los campos de la mascota')
+          setSubmitting(false)
+          return
+        }
+
         const petRes = await petsAPI.create({
           name: formData.petName,
           species: formData.petSpecies,
-          breed: formData.petBreed,
+          breed: formData.petBreed || 'Desconocido',
           age: parseInt(formData.petAge),
-          customer_id: parseInt(customerId),
+          customer_id: user.customer_id,
           doctor_id: 1,
         })
         petId = petRes.data.id.toString()
+        toast.success(`Mascota ${formData.petName} registrada exitosamente`)
+      }
+
+      if (!petId) {
+        toast.error('Por favor selecciona o registra una mascota')
+        setSubmitting(false)
+        return
       }
 
       const selectedService = services.find(s => s.id === parseInt(formData.serviceId))
       
       await appointmentsAPI.create({
         pet_id: parseInt(petId),
-        customer_id: parseInt(customerId),
+        customer_id: user.customer_id,
         service_id: parseInt(formData.serviceId),
         appointment_date: formData.appointmentDate,
         total_price: selectedService?.price || '0',
-        notes: formData.notes,
+        notes: formData.notes || '',
         status: 'scheduled',
       })
 
       setSuccess(true)
+      toast.success('¡Cita agendada exitosamente!')
+      
       gsap.to('.success-message', {
         scale: 1,
         opacity: 1,
@@ -127,11 +154,12 @@ function AppointmentsForm() {
       })
 
       setTimeout(() => {
-        window.location.href = '/'
-      }, 3000)
-    } catch (error) {
+        router.push('/dashboard')
+      }, 2000)
+    } catch (error: any) {
       console.error('Error creating appointment:', error)
-      alert('Error al crear la cita. Por favor intente nuevamente.')
+      const errorMessage = error.response?.data?.message || 'Error al crear la cita'
+      toast.error(errorMessage)
     } finally {
       setSubmitting(false)
     }
@@ -141,8 +169,8 @@ function AppointmentsForm() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🐾</div>
-          <p className="text-xl text-slate-600">Cargando...</p>
+          <PawPrint className="w-12 h-12 mx-auto mb-4 animate-bounce text-blue-600" />
+          <p className="text-slate-600">Cargando...</p>
         </div>
       </div>
     )
@@ -150,12 +178,14 @@ function AppointmentsForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="success-message text-center scale-0 opacity-0">
-          <div className="text-8xl mb-6">✅</div>
-          <h2 className="text-4xl font-bold text-slate-800 mb-4">¡Cita Agendada!</h2>
-          <p className="text-xl text-slate-600">Tu cita ha sido agendada exitosamente</p>
-          <p className="text-slate-500 mt-4">Redirigiendo...</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="success-message text-center scale-0 opacity-0 max-w-md">
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-slate-200">
+            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">¡Cita Agendada!</h2>
+            <p className="text-slate-600 mb-4">Tu cita ha sido registrada exitosamente</p>
+            <p className="text-sm text-slate-500">Redirigiendo al dashboard...</p>
+          </div>
         </div>
       </div>
     )
@@ -163,238 +193,203 @@ function AppointmentsForm() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-slate-50">
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-lg z-50 border-b border-emerald-100">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="text-3xl">🐾</div>
-              <span className="text-2xl font-bold text-emerald-600">PeluPet</span>
-            </Link>
-            <Link href="/" className="text-slate-700 hover:text-emerald-600 transition-colors">
-              Volver
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
-      <main className="pt-32 pb-20">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold text-slate-800 mb-4">Agendar Cita</h1>
-            <p className="text-xl text-slate-600">Completa el formulario para agendar tu cita</p>
+      <main className="pt-20 pb-8">
+        <div className="max-w-3xl mx-auto px-6">
+          {/* Header Clean */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Agendar Cita
+            </h1>
+            <p className="text-slate-600">Completa el formulario para reservar una cita</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="form-section bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span className="text-3xl">💇</span>
-                Seleccionar Servicio
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Servicio */}
+            <div className="form-section bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <Scissors className="w-5 h-5 text-blue-600" />
+                Servicio
               </h2>
               <select
                 required
                 value={formData.serviceId}
                 onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
-                className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none text-lg"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
               >
                 <option value="">Selecciona un servicio</option>
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {service.name} - ${service.price} ({service.duration_minutes} min)
+                    {service.name} - ${service.price}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="form-section bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span className="text-3xl">👤</span>
-                Información del Cliente
+            {/* Mascota */}
+            <div className="form-section bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <Dog className="w-5 h-5 text-blue-600" />
+                Mascota
               </h2>
               
-              <div className="flex gap-4 mb-6">
+              <div className="flex gap-3 mb-4">
                 <button
                   type="button"
-                  onClick={() => setIsNewCustomer(true)}
-                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-                    isNewCustomer ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  Nuevo Cliente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsNewCustomer(false)}
-                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-                    !isNewCustomer ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  Cliente Existente
-                </button>
-              </div>
-
-              {isNewCustomer ? (
-                <div className="space-y-4">
-                  <input
-                    required
-                    type="text"
-                    placeholder="Nombre completo"
-                    value={formData.customerName}
-                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    required
-                    type="email"
-                    placeholder="Email"
-                    value={formData.customerEmail}
-                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    required
-                    type="tel"
-                    placeholder="Teléfono"
-                    value={formData.customerPhone}
-                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Dirección"
-                    value={formData.customerAddress}
-                    onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              ) : (
-                <select
-                  required
-                  value={formData.customerId}
-                  onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                  className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                >
-                  <option value="">Selecciona un cliente</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.email}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div className="form-section bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span className="text-3xl">🐕</span>
-                Información de la Mascota
-              </h2>
-              
-              <div className="flex gap-4 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setIsNewPet(true)}
-                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-                    isNewPet ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+                  onClick={() => {
+                    setIsNewPet(true)
+                    setFormData({ ...formData, petId: '', petName: '', petSpecies: 'cat', petBreed: '', petAge: '' })
+                  }}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                    isNewPet 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   Nueva Mascota
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setIsNewPet(false)}
-                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-                    !isNewPet ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  Mascota Existente
-                </button>
+                {pets.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNewPet(false)
+                      setFormData({ ...formData, petId: '', petName: '', petSpecies: 'cat', petBreed: '', petAge: '' })
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                      !isNewPet 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    Mis Mascotas
+                  </button>
+                )}
               </div>
 
               {isNewPet ? (
                 <div className="space-y-4">
-                  <input
-                    required
-                    type="text"
-                    placeholder="Nombre de la mascota"
-                    value={formData.petName}
-                    onChange={(e) => setFormData({ ...formData, petName: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    required
-                    type="text"
-                    placeholder="Especie (Perro, Gato, etc.)"
-                    value={formData.petSpecies}
-                    onChange={(e) => setFormData({ ...formData, petSpecies: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Raza"
-                    value={formData.petBreed}
-                    onChange={(e) => setFormData({ ...formData, petBreed: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    required
-                    type="number"
-                    placeholder="Edad (años)"
-                    value={formData.petAge}
-                    onChange={(e) => setFormData({ ...formData, petAge: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Nombre de tu mascota"
+                      value={formData.petName}
+                      onChange={(e) => setFormData({ ...formData, petName: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Especie *</label>
+                      <select
+                        required
+                        value={formData.petSpecies}
+                        onChange={(e) => setFormData({ ...formData, petSpecies: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                      >
+                        <option value="cat">Gato</option>
+                        <option value="dog">Perro</option>
+                        <option value="other">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Edad *</label>
+                      <input
+                        required
+                        type="number"
+                        min="0"
+                        max="30"
+                        placeholder="Años"
+                        value={formData.petAge}
+                        onChange={(e) => setFormData({ ...formData, petAge: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Raza (opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Raza de tu mascota"
+                      value={formData.petBreed}
+                      onChange={(e) => setFormData({ ...formData, petBreed: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    />
+                  </div>
                 </div>
               ) : (
-                <select
-                  required
-                  value={formData.petId}
-                  onChange={(e) => setFormData({ ...formData, petId: e.target.value })}
-                  className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none"
-                >
-                  <option value="">Selecciona una mascota</option>
-                  {pets.map((pet) => (
-                    <option key={pet.id} value={pet.id}>
-                      {pet.name} - {pet.species} ({pet.age} años)
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Selecciona una mascota</label>
+                  <select
+                    required={!isNewPet}
+                    value={formData.petId}
+                    onChange={(e) => setFormData({ ...formData, petId: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  >
+                    <option value="">Selecciona una mascota</option>
+                    {pets.map((pet) => (
+                      <option key={pet.id} value={pet.id}>
+                        {pet.name} - {pet.species} ({pet.age} años)
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
-            <div className="form-section bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span className="text-3xl">📅</span>
+            {/* Fecha y Hora */}
+            <div className="form-section bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
                 Fecha y Hora
               </h2>
-              <input
-                required
-                type="datetime-local"
-                value={formData.appointmentDate}
-                onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
-                className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none text-lg"
-              />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Fecha y hora *</label>
+                <input
+                  required
+                  type="datetime-local"
+                  value={formData.appointmentDate}
+                  onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                />
+              </div>
             </div>
 
-            <div className="form-section bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                <span className="text-3xl">📝</span>
-                Notas Adicionales
+            {/* Notas */}
+            <div className="form-section bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Notas (opcional)
               </h2>
               <textarea
-                placeholder="Información adicional que debamos saber..."
+                placeholder="Información adicional..."
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={4}
-                className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-none resize-none"
+                rows={3}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
               />
             </div>
 
+            {/* Botón Submit */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6 rounded-2xl text-xl font-bold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {submitting ? 'Agendando...' : 'Agendar Cita'}
+              {submitting ? (
+                <>
+                  <PawPrint className="w-5 h-5 animate-bounce" />
+                  Agendando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Agendar Cita
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -408,7 +403,7 @@ export default function AppointmentsPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🐾</div>
+          <PawPrint className="w-24 h-24 mx-auto mb-4 animate-bounce text-blue-600" />
           <p className="text-xl text-slate-600">Cargando...</p>
         </div>
       </div>

@@ -1,10 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import Link from 'next/link'
 import { customServicesAPI, customersAPI } from '@/lib/api'
+import { authAPI } from '@/lib/auth'
 import { Customer } from '@/lib/types'
+import { PawPrint, Sparkles, Palette, Zap, Heart, User } from 'lucide-react'
+import { Navbar } from '@/components/Navbar'
+import toast from 'react-hot-toast'
 
 export default function CustomServicesPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -124,7 +129,7 @@ export default function CustomServicesPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🐾</div>
+          <PawPrint className="w-24 h-24 mx-auto mb-4 animate-bounce text-blue-600" />
           <p className="text-xl text-slate-600">Cargando...</p>
         </div>
       </div>
@@ -133,9 +138,9 @@ export default function CustomServicesPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 flex items-center justify-center">
         <div className="success-message text-center scale-0 opacity-0">
-          <div className="text-8xl mb-6">✨</div>
+          <Sparkles className="w-32 h-32 mx-auto mb-6 text-blue-600" />
           <h2 className="text-4xl font-bold text-slate-800 mb-4">¡Solicitud Enviada!</h2>
           <p className="text-xl text-slate-600">Revisaremos tu solicitud y te contactaremos pronto</p>
           <p className="text-slate-500 mt-4">Redirigiendo...</p>
@@ -145,26 +150,14 @@ export default function CustomServicesPage() {
   }
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50">
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-lg z-50 border-b border-purple-100">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="text-3xl">🐾</div>
-              <span className="text-2xl font-bold text-purple-600">PeluPet</span>
-            </Link>
-            <Link href="/" className="text-slate-700 hover:text-purple-600 transition-colors">
-              Volver
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div ref={containerRef} className="min-h-screen bg-slate-50">
+      <Navbar />
 
-      <main className="pt-32 pb-20">
+      <main className="pt-24 pb-20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="hero-content text-center mb-16">
-            <div className="text-7xl mb-6">✨</div>
-            <h1 className="text-6xl font-bold text-slate-800 mb-4">
+            <Sparkles className="w-20 h-20 mx-auto mb-6 text-blue-600" />
+            <h1 className="text-5xl font-bold text-slate-900 mb-4">
               Servicios Personalizados
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
@@ -174,17 +167,17 @@ export default function CustomServicesPage() {
 
           <div className="grid md:grid-cols-3 gap-6 mb-16">
             <div className="feature-card bg-white rounded-3xl p-8 text-center shadow-lg">
-              <div className="text-5xl mb-4">🎨</div>
+              <Palette className="w-20 h-20 mx-auto mb-4 text-blue-600" />
               <h3 className="text-xl font-bold text-slate-800 mb-2">Tratamientos Únicos</h3>
               <p className="text-slate-600">Diseñamos servicios específicos para las necesidades de tu mascota</p>
             </div>
             <div className="feature-card bg-white rounded-3xl p-8 text-center shadow-lg">
-              <div className="text-5xl mb-4">⚡</div>
+              <Zap className="w-20 h-20 mx-auto mb-4 text-blue-600" />
               <h3 className="text-xl font-bold text-slate-800 mb-2">Respuesta Rápida</h3>
               <p className="text-slate-600">Revisamos tu solicitud y te respondemos en menos de 24 horas</p>
             </div>
             <div className="feature-card bg-white rounded-3xl p-8 text-center shadow-lg">
-              <div className="text-5xl mb-4">💜</div>
+              <Heart className="w-20 h-20 mx-auto mb-4 text-blue-600" />
               <h3 className="text-xl font-bold text-slate-800 mb-2">Atención Especial</h3>
               <p className="text-slate-600">Cuidado individualizado con los mejores profesionales</p>
             </div>
@@ -194,7 +187,7 @@ export default function CustomServicesPage() {
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="form-section bg-white rounded-3xl p-8 shadow-xl">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="text-3xl">👤</span>
+                  <User className="w-8 h-8 text-blue-600" />
                   Información del Cliente
                 </h2>
                 
@@ -203,7 +196,7 @@ export default function CustomServicesPage() {
                     type="button"
                     onClick={() => setIsNewCustomer(true)}
                     className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-                      isNewCustomer ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'
+                      isNewCustomer ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
                     }`}
                   >
                     Nuevo Cliente
@@ -212,7 +205,7 @@ export default function CustomServicesPage() {
                     type="button"
                     onClick={() => setIsNewCustomer(false)}
                     className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-                      !isNewCustomer ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'
+                      !isNewCustomer ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
                     }`}
                   >
                     Cliente Existente
@@ -227,7 +220,7 @@ export default function CustomServicesPage() {
                       placeholder="Nombre completo"
                       value={formData.customerName}
                       onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                     />
                     <input
                       required
@@ -235,7 +228,7 @@ export default function CustomServicesPage() {
                       placeholder="Email"
                       value={formData.customerEmail}
                       onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                     />
                     <input
                       required
@@ -243,14 +236,14 @@ export default function CustomServicesPage() {
                       placeholder="Teléfono"
                       value={formData.customerPhone}
                       onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                     />
                     <input
                       type="text"
                       placeholder="Dirección"
                       value={formData.customerAddress}
                       onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
-                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                 ) : (
@@ -258,7 +251,7 @@ export default function CustomServicesPage() {
                     required
                     value={formData.customerId}
                     onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                    className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                   >
                     <option value="">Selecciona un cliente</option>
                     {customers.map((customer) => (
@@ -272,7 +265,7 @@ export default function CustomServicesPage() {
 
               <div className="form-section bg-white rounded-3xl p-8 shadow-xl">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                  <span className="text-3xl">✨</span>
+                  <Sparkles className="w-8 h-8 text-blue-600" />
                   Detalles del Servicio
                 </h2>
                 
@@ -287,7 +280,7 @@ export default function CustomServicesPage() {
                       placeholder="Ej: Corte estilo león, Spa de lujo, etc."
                       value={formData.serviceName}
                       onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
-                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                     />
                   </div>
 
@@ -301,7 +294,7 @@ export default function CustomServicesPage() {
                       value={formData.serviceDescription}
                       onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
                       rows={6}
-                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none resize-none"
+                      className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none resize-none"
                     />
                   </div>
 
@@ -317,7 +310,7 @@ export default function CustomServicesPage() {
                         placeholder="50.00"
                         value={formData.estimatedPrice}
                         onChange={(e) => setFormData({ ...formData, estimatedPrice: e.target.value })}
-                        className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                        className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -329,23 +322,23 @@ export default function CustomServicesPage() {
                         placeholder="90"
                         value={formData.estimatedDuration}
                         onChange={(e) => setFormData({ ...formData, estimatedDuration: e.target.value })}
-                        className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-purple-500 focus:outline-none"
+                        className="w-full px-6 py-4 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:outline-none"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="form-section bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl p-8 text-white">
+              <div className="form-section bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-8 text-white">
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold mb-2">¿Listo para solicitar tu servicio personalizado?</h3>
-                  <p className="text-purple-100">Revisaremos tu solicitud y nos pondremos en contacto contigo pronto</p>
+                  <p className="text-blue-100">Revisaremos tu solicitud y nos pondremos en contacto contigo pronto</p>
                 </div>
                 
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-white text-purple-600 py-6 rounded-2xl text-xl font-bold hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-white text-blue-600 py-6 rounded-2xl text-xl font-bold hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? 'Enviando Solicitud...' : 'Solicitar Servicio Personalizado'}
                 </button>
@@ -357,7 +350,7 @@ export default function CustomServicesPage() {
             <p className="text-slate-600 mb-4">¿Prefieres un servicio estándar?</p>
             <Link
               href="/services"
-              className="inline-block text-purple-600 font-semibold hover:text-purple-700 transition-colors"
+              className="inline-block text-blue-600 font-semibold hover:text-blue-700 transition-colors"
             >
               Ver Servicios Regulares →
             </Link>

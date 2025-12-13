@@ -75,7 +75,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center">
             <Link href="/" className="flex items-center gap-2">
               <div className="text-3xl">🐾</div>
-              <span className="text-2xl font-bold text-emerald-600">PeluPet</span>
+              <span className="text-2xl font-bold text-sky-600">PeluPet</span>
             </Link>
             <div className="flex items-center gap-4">
               <span className="text-slate-700">Hola, <strong>{user?.name}</strong></span>
@@ -91,20 +91,20 @@ export default function DashboardPage() {
         <h1 className="text-4xl font-bold text-slate-800 mb-8">Mi Dashboard</h1>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="stats-card bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-6 text-white">
+          <div className="stats-card bg-gradient-to-br from-sky-500 to-cyan-500 rounded-2xl p-6 text-white">
             <div className="text-4xl mb-2">🐕</div>
             <div className="text-3xl font-bold mb-1">{pets.length}</div>
-            <div className="text-emerald-100">Mascotas Registradas</div>
+            <div className="text-sky-100">Mascotas Registradas</div>
           </div>
           <div className="stats-card bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-6 text-white">
             <div className="text-4xl mb-2">📅</div>
             <div className="text-3xl font-bold mb-1">{appointments.filter(a => a.status === 'scheduled').length}</div>
             <div className="text-cyan-100">Citas Programadas</div>
           </div>
-          <div className="stats-card bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white">
+          <div className="stats-card bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-6 text-white">
             <div className="text-4xl mb-2">✅</div>
             <div className="text-3xl font-bold mb-1">{appointments.filter(a => a.status === 'completed').length}</div>
-            <div className="text-purple-100">Citas Completadas</div>
+            <div className="text-blue-100">Citas Completadas</div>
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                 <span>🐕</span> Mis Mascotas
               </h2>
-              <Link href="/appointments" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">
+              <Link href="/appointments" className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm hover:bg-sky-700">
                 + Agregar
               </Link>
             </div>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                 <span>📅</span> Próximas Citas
               </h2>
-              <Link href="/appointments" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">
+              <Link href="/appointments" className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm hover:bg-sky-700">
                 + Agendar
               </Link>
             </div>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-8 grid md:grid-cols-3 gap-6">
-          <Link href="/services" className="content-card bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-2xl hover:shadow-lg transition-shadow">
+          <Link href="/services" className="content-card bg-gradient-to-br from-sky-50 to-cyan-50 p-6 rounded-2xl hover:shadow-lg transition-shadow">
             <div className="text-4xl mb-3">💇</div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">Ver Servicios</h3>
             <p className="text-slate-600">Explora nuestros servicios de grooming</p>
@@ -176,7 +176,7 @@ export default function DashboardPage() {
             <h3 className="text-xl font-bold text-slate-800 mb-2">Agendar Cita</h3>
             <p className="text-slate-600">Reserva una cita para tu mascota</p>
           </Link>
-          <Link href="/custom-services" className="content-card bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl hover:shadow-lg transition-shadow">
+          <Link href="/custom-services" className="content-card bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl hover:shadow-lg transition-shadow">
             <div className="text-4xl mb-3">✨</div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">Servicio Custom</h3>
             <p className="text-slate-600">Solicita un servicio personalizado</p>
